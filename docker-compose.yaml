@@ -1,0 +1,62 @@
+version: '3.8'
+
+name: nginx-node-mysql
+
+services:
+  db:
+    build:
+      context: ./mysql
+    container_name: nginx-node-mysql-db
+    restart: always
+    volumes:
+      - nginx_node_mysql_data:/var/lib/mysql
+    networks:
+      - nginx-node-mysql-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+  
+  app:
+    build:
+      context: ./node
+    container_name: nginx-node-mysql-app
+    restart: always
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - nginx-node-mysql-network
+    environment:
+      DB_HOST: db
+      DB_USER: root
+      DB_PASSWORD: root
+      DB_NAME: nginx_node_mysql
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 15s
+  
+  nginx:
+    build:
+      context: ./nginx
+    container_name: nginx-node-mysql-nginx
+    restart: always
+    ports:
+      - "8080:80"
+    depends_on:
+      app:
+        condition: service_healthy
+    networks:
+      - nginx-node-mysql-network
+
+networks:
+  nginx-node-mysql-network:
+    driver: bridge
+
+volumes:
+  nginx_node_mysql_data:
