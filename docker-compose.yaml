@@ -24,6 +24,9 @@ services:
       context: ./node
     container_name: nginx-node-mysql-app
     restart: always
+    volumes:
+      - ./node:/usr/src/app
+      - /usr/src/app/node_modules
     depends_on:
       db:
         condition: service_healthy
